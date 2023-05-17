@@ -1,0 +1,23 @@
+#Check the status of the Kubernetes pods:
+kubectl get pods -n openedx
+
+#This should display a list of pods in the openedx namespace, including the MongoDB, MySQL, RabbitMQ, and OpenEDX platform pods.
+#Check the logs of the OpenEDX platform pod:
+
+kubectl logs -f <edxapp-pod-name> -n openedx
+
+#Replace <edxapp-pod-name> with the name of the OpenEDX platform pod, which you can find by running the kubectl get pods command. This will display the logs from the OpenEDX platform pod and you should see log messages indicating that the application has started.
+
+#Test the OpenEDX application by accessing it through a web browser. If the application is accessible from outside the cluster, you can simply navigate to the URL for the OpenEDX platform service. You can get the URL by running:
+
+kubectl get services -n openedx
+
+#Look for the edxapp service and copy the EXTERNAL-IP value. Paste the EXTERNAL-IP into your browser to access the OpenEDX application.
+
+#If the application is not accessible from outside the cluster, you can test it by using port forwarding to access it from your local machine. Run the following command:
+
+kubectl port-forward svc/edxapp 8000:80 -n openedx
+
+#This will forward traffic from your local port 8000 to the OpenEDX platform service on port 80. You can then access the OpenEDX application by navigating to http://localhost:8000 in your web browser.
+#If the application is running correctly, you should be able to log in and access the different features of the OpenEDX platform, such as creating courses, enrolling students, and viewing analytics.
+

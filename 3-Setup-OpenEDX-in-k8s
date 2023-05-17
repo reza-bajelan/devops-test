@@ -1,0 +1,20 @@
+# Create a Kubernetes namespace for the OpenEDX application
+kubectl create namespace openedx
+
+# Create a Kubernetes secret containing the OpenEDX configuration files
+kubectl create secret generic openedx-config --from-file=/path/to/configs -n openedx
+
+# Deploy the MongoDB database
+kubectl apply -f https://raw.githubusercontent.com/edx/configuration/master/util/kubernetes/mongodb/mongodb.yaml -n openedx
+
+# Deploy the MySQL database
+kubectl apply -f https://raw.githubusercontent.com/edx/configuration/master/util/kubernetes/mysql/mysql.yaml -n openedx
+
+# Deploy the RabbitMQ message broker
+kubectl apply -f https://raw.githubusercontent.com/edx/configuration/master/util/kubernetes/rabbitmq/rabbitmq.yaml -n openedx
+
+# Deploy the OpenEDX platform
+kubectl apply -f https://raw.githubusercontent.com/edx/configuration/master/util/kubernetes/edxapp/edxapp.yaml -n openedx
+
+# Expose the OpenEDX platform to the internet
+kubectl apply -f https://raw.githubusercontent.com/edx/configuration/master/util/kubernetes/edxapp/edxapp-service.yaml -n openedx

@@ -1,0 +1,21 @@
+stages:
+  - build
+  - deploy
+
+build:
+  image: docker:stable
+  stage: build
+  script:
+    - docker build -t <docker-image-name> .
+    - docker push <docker-image-name>
+  only:
+    - main
+
+deploy:
+  image: fluxcd/flux:latest
+  stage: deploy
+  script:
+    - fluxctl sync --k8s-fwd-ns=flux
+  only:
+    - main
+

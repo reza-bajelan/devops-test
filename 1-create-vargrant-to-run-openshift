@@ -1,0 +1,100 @@
+# Define the provider
+provider "libvirt" {
+  uri = "qemu:///system"
+}
+
+# Define the virtual machines
+module "master-1" {
+  source  = "git::https://github.com/openshift/openshift-ansible-contrib.git//roles/libvirt-vm"
+  name    = "master-1"
+  domain  = "example.com"
+  memory  = "4096"
+  vcpus   = "2"
+  disks   = ["pool=default,size=60"]
+  networks = [
+    {
+      name       = "public"
+      ip         = "192.168.0.10"
+      cidr       = "24"
+      dhcp_range = "192.168.0.20,192.168.0.50"
+    },
+    {
+      name = "internal"
+    }
+  ]
+}
+
+module "master-2" {
+  source  = "git::https://github.com/openshift/openshift-ansible-contrib.git//roles/libvirt-vm"
+  name    = "master-2"
+  domain  = "example.com"
+  memory  = "4096"
+  vcpus   = "2"
+  disks   = ["pool=default,size=60"]
+  networks = [
+    {
+      name       = "public"
+      ip         = "192.168.0.11"
+      cidr       = "24"
+      dhcp_range = "192.168.0.20,192.168.0.50"
+    },
+    {
+      name = "internal"
+    }
+  ]
+}
+
+module "worker-1" {
+  source  = "git::https://github.com/openshift/openshift-ansible-contrib.git//roles/libvirt-vm"
+  name    = "worker-1"
+  domain  = "example.com"
+  memory  = "4096"
+  vcpus   = "2"
+  disks   = ["pool=default,size=60"]
+  networks = [
+    {
+      name       = "public"
+      ip         = "192.168.0.12"
+      cidr       = "24"
+      dhcp_range = "192.168.0.20,192.168.0.50"
+    },
+    {
+      name = "internal"
+    }
+  ]
+}
+
+# Define the OpenShift components
+module "openshift" {
+  source = "github.com/openshift/openshift-ansible"
+
+  # Define the inventory
+  inventory = {
+    masters = [
+      "${module.master-1.ip_address} openshift_node_labels=\"{'node-role.kubernetes.io/master': 'true', 'node-role.kubernetes.io/infra': 'true'}\" openshift_schedulable=true",
+      "${module.master-2.ip_address} openshift_node_labels=\"{'node-role.kubernetes.io/master': 'true', 'node-role.kubernetes.io/infra': 'true'}\" openshift_schedulable=true",
+    ]
+    nodes = [
+      "${module.worker-1.ip_address} openshift_node_labels=\"{'node-role.kubernetes.io/compute': 'true'}\" openshift_schedulable=true",
+    ]
+    etcd = [
+      "${module.master-1.ip_address}:2379",
+      "${module.master-2.ip_address}:2379",
+    ]
+  }
+
+  # Define the OpenShift version
+  openshift_release = "4.7"
+
+  # Define the OpenShift pull secret
+  openshift_pull_secret = "<your-pull-secret>"
+
+  # Define the OpenShift cluster name
+  openshift_cluster_name = "exampleNote that you'll need to replace `<your-pull-secret>` with your actual OpenShift pull secret, and `<your-ssh-key>` with the path to your SSH private key file.
+
+Once you've saved the above script to a file, you can run the following commands to initialize Terraform and create the OpenShift cluster:
+
+```bash
+terraform init
+terraform apply
+

@@ -1,0 +1,73 @@
+# Configure the OpenShift provider
+provider "openshift" {
+  api_server_url = "https://api.example.com:6443"
+  token         = "my-openshift-token"
+  insecure      = true
+}
+
+# Create a new project
+resource "openshift_project" "example" {
+  name = "my-k8s-project"
+}
+
+# Install the Kubernetes Operator
+resource "openshift_operator_installation" "kubernetes" {
+  depends_on = [openshift_project.example]
+  name       = "kubernetes"
+  namespace  = "openshift-kube-operator"
+  source     = "community-operators"
+  source_namespace = "openshift-marketplace"
+  package_name = "kubernetes"
+  create_namespace = true
+}
+
+# Create a new Kubernetes custom resource definition (CRD)
+resource "openshift_kubernetes_custom_resource_definition" "example" {
+  metadata {
+    name = "my-k8s-crd"
+  }
+  spec {
+    group = "k8s.io"
+    names {
+      kind     = "MyK8s"
+      listKind = "MyK8sList"
+      plural   = "myk8s"
+      singular = "myk8"
+    }
+    scope = "Namespaced"
+    versions {
+      name = "v1"
+      served = true
+      storage = true
+      schema {
+        openAPIV3Schema {
+          type = "object"
+          properties {
+            metadata {
+              type = "object"
+              properties {
+                name {
+                  type = "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+# Create a new Kubernetes custom resource (CR)
+resource "openshift_kubernetes_custom_resource" "example" {
+  metadata {
+    name = "my-k8s-cr"
+    namespace = openshift_project.example.metadata[0].name
+  }
+  spec {
+    metadata {
+      name = "my-k8s-object"
+    }
+  }
+  depends_on = [openshift_kubernetes_custom_resource_definition.example]
+}

@@ -1,0 +1,230 @@
+provider "openshift" {
+  version = "~> 1.0"
+}
+
+resource "openshift_project" "kubernetes" {
+  name = "kubernetes"
+}
+
+resource "openshift_deployment_config" "api_server" {
+  metadata {
+    name      = "kubernetes-api"
+    namespace = openshift_project.kubernetes.metadata[0].name
+    labels = {
+      app = "kubernetes-api"
+    }
+  }
+
+  spec {
+    replicas = 1
+
+    selector {
+      app = "kubernetes-api"
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "kubernetes-api"
+        }
+      }
+
+      spec {
+        container {
+          name  = "kube-apiserver"
+          image = "k8s.gcr.io/kube-apiserver:v1.21.1"
+
+          args = [
+            "--allow-privileged",
+            "--authorization-mode=Node,RBAC",
+            "--client-ca-file=/etc/kubernetes/pki/ca.crt",
+            "--enable-admission-plugins=NodeRestriction",
+            "--enable-bootstrap-token-auth=true",
+            "--etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt",
+            "--etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt",
+            "--etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key",
+            "--etcd-servers=https://127.0.0.1:2379",
+            "--insecure-port=0",
+            "--kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt",
+            "--kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key",
+            "--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname",
+            "--proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt",
+            "--proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key",
+            "--requestheader-allowed-names=front-proxy-client",
+            "--requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt",
+            "--requestheader-extra-headers-prefix=X-Remote-Extra-",
+            "--requestheader-group-headers=X-Remote-Group",
+            "--requestheader-username-headers=X-Remote-User",
+            "--secure-port=6443",
+            "--service-account-issuer=kubernetes.default.svc.cluster.local",
+            "--service-account-key-file=/etc/kubernetes/pki/sa.pub",
+            "--service-account-signing-key-file=/etc/kubernetes/pki/sa.key",
+            "--service-cluster-ip-range=10.96.0.0/12",
+            "--tls-cert-file=/etc/kubernetes/pki/apiserver.crt",
+            "--tls-private-key-file=/etc/kubernetes/pki/apiserver.key"
+          ]
+
+          volume_mount {
+            name       = "ca-certs"
+            mount_path = "/etc/kubernetes/pki/ca.crt"
+            read_only  = true
+          }
+
+          volume_mount {
+            name       = "etcd-client-certs"
+            mount_path = "/etc/kubernetes/pki/apiserver-etcd-client.crt"
+            sub_path   = "apiserver-etcd-client.crt"
+            read_only  = true
+          }
+
+          volume_mount {
+            name       = "etcd-client-certs"
+            mount_path = "/etc/kubernetes/pki/apiserver-etcd-client.key"
+            sub_path   = "apiserver-etcd-client.key"
+            read_only  = true
+          }
+
+          volume_mount {
+            name       = "etcd-certs"
+            mount_path = "/etc/kubernetes/pki/etcd/ca.crt"
+            sub_path   = "ca.crt" 
+
+          volume_mount {
+            name       = "kubelet-client-certs"
+            mount_path = "/etc/kubernetes/pki/apiserver-kubelet-client.crt"
+            sub_path   = "apiserver-kubelet-client.crt"
+            read_only  = true
+          }
+
+          volume_mount {
+            name       = "kubelet-client-certs"
+            mount_path = "/etc/kubernetes/pki/apiserver-kubelet-client.key"
+            sub_path   = "apiserver-kubelet-client.key"
+            read_only  = true
+          }
+
+          volume_mount {
+            name       = "front-proxy-client-certs"
+            mount_path = "/etc/kubernetes/pki/front-proxy-client.crt"
+            sub_path   = "front-proxy-client.crt"
+            read_only  = true
+          }
+
+          volume_mount {
+            name       = "front-proxy-client-certs"
+            mount_path = "/etc/kubernetes/pki/front-proxy-client.key"
+            sub_path   = "front-proxy-client.key"
+            read_only  = true
+          }
+
+          volume_mount {
+            name       = "sa-public-key"
+            mount_path = "/etc/kubernetes/pki/sa.pub"
+            read_only  = true
+          }
+
+          volume_mount {
+            name       = "sa-private-key"
+            mount_path = "/etc/kubernetes/pki/sa.key"
+            read_only  = true
+          }
+        }
+
+        volume {
+          name = "ca-certs"
+
+          secret {
+            secret_name = "kubernetes"
+          }
+        }
+
+        volume {
+          name = "etcd-client-certs"
+
+          secret {
+            secret_name = "etcd-client"
+          }
+        }
+
+        volume {
+          name = "etcd-certs"
+
+          secret {
+            secret_name = "etcd-client"
+          }
+        }
+
+        volume {
+          name = "kubelet-client-certs"
+
+          secret {
+            secret_name = "kubelet-client"
+          }
+        }
+
+        volume {
+          name = "front-proxy-client-certs"
+
+          secret {
+            secret_name = "front-proxy-client"
+          }
+        }
+
+        volume {
+          name = "sa-public-key"
+
+          secret {
+            secret_name = "kubernetes"
+            items = [
+              {
+                key  = "sa.pub"
+                path = "sa.pub"
+              }
+            ]
+          }
+        }
+
+        volume {
+          name = "sa-private-key"
+
+          secret {
+            secret_name = "kubernetes"
+            items = [
+              {
+                key  = "sa.key"
+                path = "sa.key"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "openshift_service" "api_server" {
+  metadata {
+    name      = "kubernetes"
+    namespace = openshift_project.kubernetes.metadata[0].name
+    labels = {
+      app = "kubernetes"
+    }
+  }
+
+  spec {
+    selector = {
+      app = "kubernetes-api"
+    }
+
+    ports {
+      name       = "https"
+      port       = 443
+      targetPort = 6443
+    }
+  }
+}
+
+output "api_server_url" {
+  value = openshift_service.api_server.status[0].load_balancer.ingress[0].hostname
+}
+
